@@ -26,11 +26,21 @@ import { homedir } from 'os';
 const USER_DIR = join(homedir(), '.follow-builders');
 const CONFIG_PATH = join(USER_DIR, 'config.json');
 
-const FEED_X_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-x.json';
-const FEED_YOUTUBE_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-youtube.json';
-const FEED_BLOGS_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-blogs.json';
+// This repo owns both the feeds and the prompts. Everything is read from the
+// working tree first (see readTextFile/readJSONFile) and only falls back to
+// this repo's raw URL when the file is not on disk.
+const REPO_SLUG = 'good2luck/follow-builders';
+const REPO_RAW_BASE = `https://raw.githubusercontent.com/${REPO_SLUG}/main`;
 
-const PROMPTS_BASE = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/prompts';
+const SCRIPT_DIR = decodeURIComponent(new URL('.', import.meta.url).pathname);
+const REPO_ROOT = join(SCRIPT_DIR, '..');
+
+const FEED_FILES = {
+  x: 'feed-x.json',
+  youtube: 'feed-youtube.json',
+  blogs: 'feed-blogs.json'
+};
+
 const PROMPT_FILES = [
   'summarize-tweets.md',
   'summarize-blogs.md',
@@ -52,6 +62,40 @@ async function fetchText(url) {
   return res.text();
 }
 
+// -- Read helpers ------------------------------------------------------------
+//
+// Everything this script consumes is owned by this repo: the feeds are written
+// by the "Generate feeds" step, which runs in the same CI job immediately
+// before this one. Read them off disk, because that copy is always the
+// freshest. Fetching them from raw.githubusercontent.com instead would hit its
+// 5-minute CDN cache and hand back the PREVIOUS run's feed — content that has
+// already been digested and delivered — so the digest would repeat a day.
+// The raw URL is only the fallback for a checkout without the files.
+
+async function readJSONFile(filename) {
+  const localPath = join(REPO_ROOT, filename);
+  if (existsSync(localPath)) {
+    try {
+      return JSON.parse(await readFile(localPath, 'utf-8'));
+    } catch {
+      // unreadable or malformed — fall through to the remote copy
+    }
+  }
+  return fetchJSON(`${REPO_RAW_BASE}/${filename}`);
+}
+
+async function readTextFile(relativePath) {
+  const localPath = join(REPO_ROOT, relativePath);
+  if (existsSync(localPath)) {
+    try {
+      return await readFile(localPath, 'utf-8');
+    } catch {
+      // unreadable — fall through to the remote copy
+    }
+  }
+  return fetchText(`${REPO_RAW_BASE}/${relativePath}`);
+}
+
 // -- Main --------------------------------------------------------------------
 
 async function main() {
@@ -71,11 +115,11 @@ async function main() {
     }
   }
 
-  // 2. Fetch all three feeds
+  // 2. Load all three feeds
   const [feedX, feedYouTube, feedBlogs] = await Promise.all([
-    fetchJSON(FEED_X_URL),
-    fetchJSON(FEED_YOUTUBE_URL),
-    fetchJSON(FEED_BLOGS_URL)
+    readJSONFile(FEED_FILES.x),
+    readJSONFile(FEED_FILES.youtube),
+    readJSONFile(FEED_FILES.blogs)
   ]);
 
   if (!feedX) errors.push('Could not fetch tweet feed');
@@ -97,21 +141,17 @@ async function main() {
     );
   }
 
-  // 3. Load prompts with priority: user custom > remote (GitHub) > local default
+  // 3. Load prompts with priority: user custom > this repo's copy
   //
   // If the user has a custom prompt at ~/.follow-builders/prompts/<file>,
-  // use that (they personalized it — don't overwrite with remote updates).
-  // Otherwise, fetch the latest from GitHub so they get central improvements.
-  // If GitHub is unreachable, fall back to the local copy shipped with the skill.
+  // use that (they personalized it). Otherwise use this repo's prompts/
+  // directory — edits made there take effect on the next run.
   const prompts = {};
-  const scriptDir = decodeURIComponent(new URL('.', import.meta.url).pathname);
-  const localPromptsDir = join(scriptDir, '..', 'prompts');
   const userPromptsDir = join(USER_DIR, 'prompts');
 
   for (const filename of PROMPT_FILES) {
     const key = filename.replace('.md', '').replace(/-/g, '_');
     const userPath = join(userPromptsDir, filename);
-    const localPath = join(localPromptsDir, filename);
 
     // Priority 1: user's custom prompt (they personalized it)
     if (existsSync(userPath)) {
@@ -119,16 +159,10 @@ async function main() {
       continue;
     }
 
-    // Priority 2: latest from GitHub (central updates)
-    const remote = await fetchText(`${PROMPTS_BASE}/${filename}`);
-    if (remote) {
-      prompts[key] = remote;
-      continue;
-    }
-
-    // Priority 3: local copy shipped with the skill
-    if (existsSync(localPath)) {
-      prompts[key] = await readFile(localPath, 'utf-8');
+    // Priority 2: this repo's copy — the working tree, else the raw URL
+    const prompt = await readTextFile(join('prompts', filename));
+    if (prompt) {
+      prompts[key] = prompt;
     } else {
       errors.push(`Could not load prompt: ${filename}`);
     }

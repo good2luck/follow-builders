@@ -60,9 +60,25 @@ function buildSystemPrompt(prepared) {
     // for those two it is used verbatim — rewriting the target to "zh" would
     // leave the prompt reading "translating ... from English to zh".
     // Any other language code swaps the target language in the opening line.
-    const prompt = lang === 'zh' || lang === 'bilingual'
+    let prompt = lang === 'zh' || lang === 'bilingual'
       ? prompts.translate
       : prompts.translate.replace('from English to Chinese', `from English to ${lang}`);
+
+    // 'zh' means Chinese and nothing else. translate.md also documents the
+    // bilingual layout (English paragraph, then its Chinese translation), and
+    // left in place that clause leaks into the output. Drop it and state the
+    // requirement outright.
+    if (lang === 'zh') {
+      prompt = prompt.replace(/\n- For bilingual mode:[\s\S]*?(?=\n- )/, '');
+      prompt += [
+        '',
+        '- Output the Chinese version ONLY. Never include the English original,',
+        '  and never put English and Chinese side by side.',
+        '- Everything in the output is Chinese except the technical terms, proper',
+        '  nouns and URLs listed above, including any status or boilerplate lines.',
+      ].join('\n');
+    }
+
     parts.push(prompt);
   }
 

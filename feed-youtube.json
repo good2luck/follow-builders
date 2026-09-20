@@ -1,16 +1,8 @@
 {
-  "generatedAt": "2026-09-20T14:39:30.211Z",
+  "generatedAt": "2026-09-20T15:28:57.960Z",
   "lookbackHours": 72,
-  "youtube": [
-    {
-      "source": "youtube",
-      "name": "No Priors",
-      "title": "Betting on Diffusion",
-      "url": "https://www.youtube.com/watch?v=s2Fi0_qzaJ0",
-      "publishedAt": "2026-09-20T14:11:58.000Z"
-    }
-  ],
+  "youtube": [],
   "stats": {
-    "youtubeVideos": 1
+    "youtubeVideos": 0
   }
 }

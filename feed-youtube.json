@@ -1,8 +1,23 @@
 {
-  "generatedAt": "2026-09-20T05:22:38.757Z",
+  "generatedAt": "2026-09-20T05:30:43.167Z",
   "lookbackHours": 72,
-  "youtube": [],
+  "youtube": [
+    {
+      "source": "youtube",
+      "name": "No Priors",
+      "title": "Why Diffusion Will Win AI Inference with Inception Co-Founder and CEO Stefano Ermon",
+      "url": "https://www.youtube.com/watch?v=N1rjtDs8blY",
+      "publishedAt": "2026-09-18T10:00:10.000Z"
+    },
+    {
+      "source": "youtube",
+      "name": "No Priors",
+      "title": "Google’s $10M Data Grab",
+      "url": "https://www.youtube.com/watch?v=hg0X7hdpuVs",
+      "publishedAt": "2026-09-17T16:37:17.000Z"
+    }
+  ],
   "stats": {
-    "youtubeVideos": 0
+    "youtubeVideos": 2
   }
 }

@@ -1,37 +1,16 @@
 {
-  "generatedAt": "2026-09-20T11:20:42.840Z",
+  "generatedAt": "2026-09-20T14:39:30.211Z",
   "lookbackHours": 72,
   "youtube": [
     {
       "source": "youtube",
-      "name": "Latent Space",
-      "title": "A Worm With 302 Neurons Inspired Their Architecture — Ramin Hasani, Liquid AI",
-      "url": "https://www.youtube.com/watch?v=V_9TCu_21SE",
-      "publishedAt": "2026-09-18T20:17:04.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "The MAD Podcast with Matt Turck",
-      "title": "Why Some People Love AI—and Others Hate It #ai #podcast",
-      "url": "https://www.youtube.com/watch?v=saJqCsom1gQ",
-      "publishedAt": "2026-09-19T16:00:36.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "The MAD Podcast with Matt Turck",
-      "title": "AI Is Already Reducing Animal Testing #ai #podcast",
-      "url": "https://www.youtube.com/watch?v=gWdsuChDPZA",
-      "publishedAt": "2026-09-18T16:00:13.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "The MAD Podcast with Matt Turck",
-      "title": "Biology Is Becoming Programmable #ai #podcast",
-      "url": "https://www.youtube.com/watch?v=aQJZyiqaHlY",
-      "publishedAt": "2026-09-17T16:00:37.000Z"
+      "name": "No Priors",
+      "title": "Betting on Diffusion",
+      "url": "https://www.youtube.com/watch?v=s2Fi0_qzaJ0",
+      "publishedAt": "2026-09-20T14:11:58.000Z"
     }
   ],
   "stats": {
-    "youtubeVideos": 4
+    "youtubeVideos": 1
   }
 }

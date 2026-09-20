@@ -93,7 +93,8 @@
     "https://www.youtube.com/watch?v=V_9TCu_21SE": 1789903240545,
     "https://www.youtube.com/watch?v=saJqCsom1gQ": 1789903242116,
     "https://www.youtube.com/watch?v=gWdsuChDPZA": 1789903242116,
-    "https://www.youtube.com/watch?v=aQJZyiqaHlY": 1789903242116
+    "https://www.youtube.com/watch?v=aQJZyiqaHlY": 1789903242116,
+    "https://www.youtube.com/watch?v=s2Fi0_qzaJ0": 1789915168774
   },
   "seenArticles": {
     "https://www.anthropic.com/engineering/how-we-contain-claude": 1789454533157,
@@ -101,6 +102,7 @@
     "https://www.anthropic.com/engineering/managed-agents": 1789454534411,
     "https://claude.com/blog/artifacts-in-claude-code": 1789454535127,
     "https://claude.com/blog/claude-for-small-business-launches-new-workflows-integrations-and-training-programs": 1789540968474,
-    "https://claude.com/blog/cowork-is-now-claude": 1789629679392
+    "https://claude.com/blog/cowork-is-now-claude": 1789629679392,
+    "https://claude.com/blog/claude-in-chrome-generally-available": 1789915170738
   }
 }

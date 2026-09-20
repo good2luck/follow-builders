@@ -1,65 +1,8 @@
 {
-  "generatedAt": "2026-09-17T07:30:42.654Z",
+  "generatedAt": "2026-09-20T05:22:38.757Z",
   "lookbackHours": 72,
-  "youtube": [
-    {
-      "source": "youtube",
-      "name": "Latent Space",
-      "title": "The Watchdogs of AGI — Rune Kvist of AI Underwriting Company",
-      "url": "https://www.youtube.com/watch?v=Sc2_LfWgHb4",
-      "publishedAt": "2026-09-16T18:01:13.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "Latent Space",
-      "title": "Recursive Self-Improvement: from Auto Research to Superintelligence — Richard Socher, Recursive",
-      "url": "https://www.youtube.com/watch?v=eDFXtSg3zB8",
-      "publishedAt": "2026-09-14T15:45:28.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "Training Data",
-      "title": "Box's Aaron Levie: On Reinventing Yourself in the AI Age and Enterprise Diffusion",
-      "url": "https://www.youtube.com/watch?v=NE4CLThMPGU",
-      "publishedAt": "2026-09-15T12:00:34.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "No Priors",
-      "title": "The Agentic Economy Will Be Bigger Than Ours",
-      "url": "https://www.youtube.com/watch?v=3STlBy9igV8",
-      "publishedAt": "2026-09-16T14:39:53.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "No Priors",
-      "title": "Sending Money at the Speed of a WhatsApp Message 177 V 1",
-      "url": "https://www.youtube.com/watch?v=5082Aonj6ns",
-      "publishedAt": "2026-09-14T22:25:29.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "The MAD Podcast with Matt Turck",
-      "title": "AI Is Eating Software #ai #podcast",
-      "url": "https://www.youtube.com/watch?v=LQI7Tg6TBAY",
-      "publishedAt": "2026-09-16T16:00:13.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "The MAD Podcast with Matt Turck",
-      "title": "AI Is About to Change Mathematics #ai #podcast",
-      "url": "https://www.youtube.com/watch?v=L1PX8TbqBU8",
-      "publishedAt": "2026-09-15T16:00:06.000Z"
-    },
-    {
-      "source": "youtube",
-      "name": "The MAD Podcast with Matt Turck",
-      "title": "Can AI Actually Cure Cancer? #ai #podcast",
-      "url": "https://www.youtube.com/watch?v=hZSBG2TC6js",
-      "publishedAt": "2026-09-14T16:00:18.000Z"
-    }
-  ],
+  "youtube": [],
   "stats": {
-    "youtubeVideos": 8
+    "youtubeVideos": 0
   }
 }

@@ -4,7 +4,7 @@
 // Follow Builders — Delivery Script
 // ============================================================================
 // Sends a digest to the user via their chosen delivery method.
-// Supports: Telegram bot, Email (via Resend), or stdout (default).
+// Supports: Telegram bot, Email (via Resend), DingTalk webhook, or stdout (default).
 //
 // Usage:
 //   echo "digest text" | node deliver.js
@@ -17,6 +17,7 @@
 // Delivery methods:
 //   - "telegram": sends via Telegram Bot API (needs TELEGRAM_BOT_TOKEN + chat ID)
 //   - "email": sends via Resend API (needs RESEND_API_KEY + email address)
+//   - "dingtalk": sends via DingTalk custom robot webhook (needs DINGTALK_WEBHOOK_URL or DINGTALK_ACCESS_TOKEN)
 //   - "stdout" (default): just prints to terminal
 // ============================================================================
 
@@ -149,6 +150,33 @@ async function sendEmail(text, apiKey, toEmail) {
   }
 }
 
+// -- DingTalk Delivery -------------------------------------------------------
+
+// Sends the digest via DingTalk custom robot webhook.
+// The webhook URL looks like:
+//   https://oapi.dingtalk.com/robot/send?access_token=xxx
+// We store only the access_token, then build the URL at send time.
+async function sendDingtalk(text, accessToken) {
+  const url = `https://oapi.dingtalk.com/robot/send?access_token=${accessToken}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      msgtype: 'markdown',
+      markdown: {
+        title: 'AI Builders Digest',
+        text: text
+      }
+    })
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok || data?.errcode !== 0) {
+    throw new Error(`DingTalk API error: ${data?.errmsg || `HTTP ${res.status}`}`);
+  }
+}
+
 // -- Main --------------------------------------------------------------------
 
 async function main() {
@@ -194,6 +222,23 @@ async function main() {
           status: 'ok',
           method: 'email',
           message: `Digest sent to ${toEmail}`
+        }));
+        break;
+      }
+
+      case 'dingtalk': {
+        const webhookUrl = process.env.DINGTALK_WEBHOOK_URL;
+        const accessToken =
+          process.env.DINGTALK_ACCESS_TOKEN ||
+          (webhookUrl ? new URL(webhookUrl).searchParams.get('access_token') : null);
+        if (!accessToken) {
+          throw new Error('DINGTALK_ACCESS_TOKEN or DINGTALK_WEBHOOK_URL not found in .env');
+        }
+        await sendDingtalk(digestText, accessToken);
+        console.log(JSON.stringify({
+          status: 'ok',
+          method: 'dingtalk',
+          message: 'Digest sent to DingTalk'
         }));
         break;
       }

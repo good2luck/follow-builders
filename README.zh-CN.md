@@ -10,8 +10,8 @@
 
 每日或每周推送到你常用的通讯工具（Telegram、Discord、WhatsApp 等），包含：
 
-- 顶级 AI 播客新节目的精华摘要
 - 26 位精选 AI 建造者在 X/Twitter 上的关键观点和洞察
+- 6 个精选 AI YouTube 频道/播放列表的新视频
 - AI 公司官方博客的完整文章（Anthropic Engineering、Claude Blog）
 - 所有原始内容的链接
 - 支持英文、中文或双语版本
@@ -25,7 +25,7 @@
 Agent 会询问你：
 - 推送频率（每日或每周）和时间
 - 语言偏好
-- 推送方式（Telegram、邮件或直接在聊天中显示）
+- 推送方式（Telegram、邮件、钉钉或直接在聊天中显示）
 
 不需要任何 API key——所有内容由中心化服务统一抓取。
 设置完成后，你的第一期摘要会立即推送。
@@ -35,11 +35,12 @@ Agent 会询问你：
 通过对话即可修改推送偏好。直接告诉你的 agent：
 
 - "改成每周一早上推送"
+- "改成每天推送到钉钉群"
 - "语言换成中文"
 - "把摘要写得更简短一些"
 - "显示我当前的设置"
 
-信息源列表（建造者和播客）由中心化统一管理和更新——你无需做任何操作即可获得最新的信息源。
+信息源列表（建造者、频道和博客）由中心化统一管理和更新——你无需做任何操作即可获得最新的信息源。
 
 ## 自定义摘要风格
 
@@ -50,7 +51,6 @@ Skill 使用纯文本 prompt 文件来控制内容的摘要方式。你可以通
 
 **直接编辑（高级用户）：**
 编辑 `prompts/` 文件夹中的文件：
-- `summarize-podcast.md` — 播客节目的摘要方式
 - `summarize-tweets.md` — X/Twitter 帖子的摘要方式
 - `summarize-blogs.md` — 博客文章的摘要方式
 - `digest-intro.md` — 整体摘要的格式和语气
@@ -58,9 +58,22 @@ Skill 使用纯文本 prompt 文件来控制内容的摘要方式。你可以通
 
 这些都是纯文本指令，不是代码。修改后下次推送即生效。
 
+## 钉钉机器人推送
+
+在钉钉群中添加"自定义机器人"获得 Webhook 地址，提取其中的 `access_token`，存入 `~/.follow-builders/.env`：
+
+```bash
+DINGTALK_ACCESS_TOKEN=你的钉钉机器人access_token
+DEEPSEEK_API_KEY=你的_deepseek_api_key
+```
+
+然后将 `~/.follow-builders/config.json` 中 `delivery.method` 改为 `"dingtalk"`。
+
+如果使用 GitHub Actions，请将 `DINGTALK_ACCESS_TOKEN` 和 `DEEPSEEK_API_KEY` 配置为仓库 Secrets。GitHub Actions 会自动执行完整链路：生成 feeds → DeepSeek 总结 → 推送到钉钉群。
+
 ## 默认信息源
 
-### 播客（6个）
+### YouTube 频道（6个）
 - [Latent Space](https://www.youtube.com/@LatentSpacePod)
 - [Training Data](https://www.youtube.com/playlist?list=PLOhHNjZItNnMm5tdW61JpnyxeYH5NDDx8)
 - [No Priors](https://www.youtube.com/@NoPriorsPodcast)
@@ -98,11 +111,11 @@ cd ~/.claude/skills/follow-builders/scripts && npm install
 - 一个 AI agent（OpenClaw、Claude Code 或类似工具）
 - 网络连接（用于获取中心化 feed）
 
-仅此而已。不需要任何 API key。所有内容（博客文章 + YouTube 字幕 + X/Twitter 帖子）由中心化服务每日抓取更新。
+仅此而已。不需要任何 API key。所有内容（博客文章 + YouTube 视频 + X/Twitter 帖子）由中心化服务每日抓取更新。
 
 ## 工作原理
 
-1. 中心化 feed 每日更新，抓取所有信息源的最新内容（博客文章通过网页抓取，YouTube 字幕通过 Supadata，X/Twitter 通过官方 API）
+1. 中心化 feed 每日更新，抓取所有信息源的最新内容（博客文章和 YouTube 视频通过网页抓取，X/Twitter 通过官方 API）
 2. 你的 agent 获取 feed——一次 HTTP 请求，不需要 API key
 3. 你的 agent 根据你的偏好将原始内容重新混编为易消化的摘要
 4. 摘要推送到你的通讯工具（或直接在聊天中显示）

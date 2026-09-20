@@ -2,3 +2,5 @@ scripts/node_modules/
 .env
 *.log
 .DS_Store
+prepared-digest.json
+digest.txt

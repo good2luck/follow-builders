@@ -4,13 +4,13 @@
 // Follow Builders — Central Feed Generator
 // ============================================================================
 // Runs on GitHub Actions (daily at 6am UTC) to fetch content and publish
-// feed-x.json, feed-podcasts.json, and feed-blogs.json.
+// feed-x.json and feed-blogs.json.
 //
-// Deduplication: tracks previously seen tweet IDs, episode GUIDs, and article
+// Deduplication: tracks previously seen tweet IDs and article
 // URLs in state-feed.json so content is never repeated across runs.
 //
-// Usage: node generate-feed.js [--tweets-only | --podcasts-only | --blogs-only]
-// Env vars needed: X_BEARER_TOKEN, POD2TXT_API_KEY
+// Usage: node generate-feed.js [--tweets-only | --blogs-only]
+// Env vars needed: X_BEARER_TOKEN
 // ============================================================================
 
 import { readFile, writeFile } from "fs/promises";
@@ -19,17 +19,17 @@ import { join } from "path";
 
 // -- Constants ---------------------------------------------------------------
 
-const POD2TXT_BASE = "https://pod2txt.vercel.app/api";
 const X_API_BASE = "https://api.x.com/2";
-// Some RSS hosts (notably Substack) block non-browser user agents from cloud IPs.
+// YouTube blocks non-browser user agents from cloud IPs sometimes.
 // Using a real Chrome UA avoids 403 errors in GitHub Actions.
-const RSS_USER_AGENT =
+const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const TWEET_LOOKBACK_HOURS = 24;
-const PODCAST_LOOKBACK_HOURS = 336; // 14 days — podcasts publish weekly/biweekly, not daily
 const BLOG_LOOKBACK_HOURS = 72;
+const YOUTUBE_LOOKBACK_HOURS = 72;
 const MAX_TWEETS_PER_USER = 3;
 const MAX_ARTICLES_PER_BLOG = 3;
+const MAX_VIDEOS_PER_CHANNEL = 3;
 const X_USER_LOOKUP_BATCH_SIZE = 5;
 const X_RETRY_STATUSES = new Set([500, 502, 503, 504]);
 const X_RETRY_ATTEMPTS = 3;
@@ -51,6 +51,7 @@ async function loadState() {
     const state = JSON.parse(await readFile(STATE_PATH, "utf-8"));
     // Ensure seenArticles exists for older state files
     if (!state.seenArticles) state.seenArticles = {};
+    if (!state.seenVideos) state.seenVideos = {};
     return state;
   } catch {
     return { seenTweets: {}, seenVideos: {}, seenArticles: {} };
@@ -63,7 +64,7 @@ async function saveState(state) {
   for (const [id, ts] of Object.entries(state.seenTweets)) {
     if (ts < cutoff) delete state.seenTweets[id];
   }
-  for (const [id, ts] of Object.entries(state.seenVideos)) {
+  for (const [id, ts] of Object.entries(state.seenVideos || {})) {
     if (ts < cutoff) delete state.seenVideos[id];
   }
   for (const [id, ts] of Object.entries(state.seenArticles || {})) {
@@ -79,52 +80,8 @@ async function loadSources() {
   return JSON.parse(await readFile(sourcesPath, "utf-8"));
 }
 
-// -- Podcast Fetching (RSS + pod2txt) ----------------------------------------
 
-// Parses an RSS feed XML string and returns episode objects with
-// title, publishedAt, guid, and link. RSS feeds list newest first.
-function parseRssFeed(xml) {
-  const episodes = [];
-  // Match each <item> block in the RSS feed
-  const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
-  let itemMatch;
-  while ((itemMatch = itemRegex.exec(xml)) !== null) {
-    const block = itemMatch[1];
-
-    // Extract title (inside CDATA or plain text)
-    const titleMatch =
-      block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) ||
-      block.match(/<title>([\s\S]*?)<\/title>/);
-    const title = titleMatch ? titleMatch[1].trim() : "Untitled";
-
-    // Extract GUID (unique episode identifier), stripping CDATA wrapper if present
-    const guidMatch =
-      block.match(/<guid[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/guid>/) ||
-      block.match(/<guid[^>]*>([\s\S]*?)<\/guid>/);
-    const guid = guidMatch ? guidMatch[1].trim() : null;
-
-    // Extract publish date
-    const pubDateMatch = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-    const publishedAt = pubDateMatch
-      ? new Date(pubDateMatch[1].trim()).toISOString()
-      : null;
-
-    // Extract episode link (for the feed output URL)
-    const linkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
-    const link = linkMatch ? linkMatch[1].trim() : null;
-
-    if (guid) {
-      episodes.push({ title, guid, publishedAt, link });
-    }
-  }
-  return episodes;
-}
-
-// -- YouTube Episode URL Lookup ----------------------------------------------
-// Podcast RSS feeds don't know about YouTube, so to get the exact YouTube
-// video URL for an episode we look up the channel's recent videos and match
-// by title. Free, no API key required. Tries Atom RSS first (stable but
-// returns 500 for some channels), falls back to scraping the /videos page.
+// -- YouTube Fetching (channel / playlist) -----------------------------------
 
 // Derives a YouTube Atom feed URL from a channel or playlist URL.
 // Handles three URL shapes: /@handle, /channel/UCxxx, /playlist?list=PLxxx.
@@ -148,7 +105,7 @@ async function getYouTubeFeedUrl(channelUrl) {
     try {
       const res = await fetch(channelUrl, {
         headers: {
-          "User-Agent": RSS_USER_AGENT,
+          "User-Agent": USER_AGENT,
           "Accept-Language": "en-US,en;q=0.9",
         },
         signal: AbortSignal.timeout(15000),
@@ -168,6 +125,29 @@ async function getYouTubeFeedUrl(channelUrl) {
     }
   }
   return null;
+}
+
+// Parses a YouTube Atom feed and returns { title, url, publishedAt } per entry.
+function parseYouTubeFeed(xml) {
+  const videos = [];
+  const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+  let entryMatch;
+  while ((entryMatch = entryRegex.exec(xml)) !== null) {
+    const block = entryMatch[1];
+    const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
+    const videoIdMatch = block.match(/<yt:videoId>([\s\S]*?)<\/yt:videoId>/);
+    const publishedMatch = block.match(/<published>([\s\S]*?)<\/published>/);
+    if (titleMatch && videoIdMatch) {
+      videos.push({
+        title: titleMatch[1].trim(),
+        url: `https://www.youtube.com/watch?v=${videoIdMatch[1].trim()}`,
+        publishedAt: publishedMatch
+          ? new Date(publishedMatch[1].trim()).toISOString()
+          : null,
+      });
+    }
+  }
+  return videos;
 }
 
 // Scrapes recent videos from a YouTube channel's /videos page by parsing
@@ -199,6 +179,7 @@ function parseYouTubePageData(html) {
           videos.push({
             title,
             url: `https://www.youtube.com/watch?v=${v.videoId}`,
+            publishedAt: null,
           });
         }
       }
@@ -217,6 +198,7 @@ function parseYouTubePageData(html) {
           videos.push({
             title,
             url: `https://www.youtube.com/watch?v=${v.videoId}`,
+            publishedAt: null,
           });
         }
       }
@@ -233,7 +215,7 @@ async function fetchYouTubeVideos(channelUrl) {
   if (feedUrl) {
     try {
       const res = await fetch(feedUrl, {
-        headers: { "User-Agent": RSS_USER_AGENT },
+        headers: { "User-Agent": USER_AGENT },
         signal: AbortSignal.timeout(15000),
       });
       if (res.ok) {
@@ -254,7 +236,7 @@ async function fetchYouTubeVideos(channelUrl) {
   try {
     const res = await fetch(videosPageUrl, {
       headers: {
-        "User-Agent": RSS_USER_AGENT,
+        "User-Agent": USER_AGENT,
         "Accept-Language": "en-US,en;q=0.9",
       },
       signal: AbortSignal.timeout(15000),
@@ -266,259 +248,69 @@ async function fetchYouTubeVideos(channelUrl) {
   }
 }
 
-// Parses a YouTube Atom feed and returns { title, url } for each entry.
-function parseYouTubeFeed(xml) {
-  const videos = [];
-  const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
-  let entryMatch;
-  while ((entryMatch = entryRegex.exec(xml)) !== null) {
-    const block = entryMatch[1];
-    const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
-    const videoIdMatch = block.match(/<yt:videoId>([\s\S]*?)<\/yt:videoId>/);
-    if (titleMatch && videoIdMatch) {
-      videos.push({
-        title: titleMatch[1].trim(),
-        url: `https://www.youtube.com/watch?v=${videoIdMatch[1].trim()}`,
-      });
-    }
-  }
-  return videos;
-}
+// Main YouTube fetching function. For each channel:
+// 1. Fetches recent videos (Atom feed, with /videos page scraping fallback)
+// 2. Filters by lookback window and dedup against state.seenVideos
+// 3. Emits up to MAX_VIDEOS_PER_CHANNEL new videos per channel
+async function fetchYouTubeContent(channels, state, errors) {
+  const results = [];
+  const cutoff = new Date(
+    Date.now() - YOUTUBE_LOOKBACK_HOURS * 60 * 60 * 1000,
+  );
 
-// Lowercase, strip punctuation, collapse whitespace — so minor title
-// differences between a podcast feed and its YouTube upload don't block a match.
-function normalizeTitle(t) {
-  return t
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// Finds the YouTube video whose title best matches the podcast episode title.
-// Uses substring match first, then token overlap (>=50% of episode's content
-// words must appear in the video title). Returns null if no confident match.
-async function findYouTubeEpisodeUrl(channelUrl, episodeTitle) {
-  const videos = await fetchYouTubeVideos(channelUrl);
-  if (videos.length === 0) return null;
-
-  const needle = normalizeTitle(episodeTitle);
-  const needleTokens = new Set(needle.split(" ").filter((w) => w.length > 2));
-  if (needleTokens.size === 0) return null;
-
-  let bestUrl = null;
-  let bestScore = 0;
-  for (const v of videos) {
-    const hay = normalizeTitle(v.title);
-    if (hay && (hay.includes(needle) || needle.includes(hay))) {
-      return v.url;
-    }
-    const hayTokens = new Set(hay.split(" ").filter((w) => w.length > 2));
-    let overlap = 0;
-    for (const tok of needleTokens) if (hayTokens.has(tok)) overlap++;
-    const score = overlap / needleTokens.size;
-    if (score > bestScore) {
-      bestScore = score;
-      bestUrl = v.url;
-    }
-  }
-  return bestScore >= 0.5 ? bestUrl : null;
-}
-
-// Fetches a transcript from pod2txt. The API is async: first request may
-// return "processing", so we poll until "ready" (up to 5 attempts, ~2.5 min).
-async function fetchPod2txtTranscript(rssUrl, guid, apiKey) {
-  const maxAttempts = 5;
-  const pollInterval = 30000; // 30 seconds between polls
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const res = await fetch(`${POD2TXT_BASE}/transcript`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ feedurl: rssUrl, guid, apikey: apiKey }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return { error: `HTTP ${res.status}: ${text}` };
-    }
-
-    const data = await res.json();
-
-    if (data.status === "ready" && data.url) {
-      // Transcript is ready — fetch the text from the provided URL
-      const txtRes = await fetch(data.url);
-      if (!txtRes.ok)
-        return {
-          error: `Failed to fetch transcript text: HTTP ${txtRes.status}`,
-        };
-      const transcript = await txtRes.text();
-      return { transcript };
-    }
-
-    if (data.status === "processing") {
-      console.error(
-        `      pod2txt: processing (attempt ${attempt}/${maxAttempts}), waiting ${pollInterval / 1000}s...`,
-      );
-      if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, pollInterval));
-      }
+  for (const channel of channels) {
+    if (!channel.url || !channel.url.includes("youtube.com")) {
+      errors.push(`YouTube: No url configured for ${channel.name}`);
       continue;
     }
 
-    // Unexpected status or error from the API
-    return { error: data.message || `Unexpected status: ${data.status}` };
-  }
-
-  return { error: "Timed out waiting for transcript processing" };
-}
-
-// Main podcast fetching function. For each podcast:
-// 1. Fetches the RSS feed to discover episodes
-// 2. Filters by lookback window and dedup
-// 3. Fetches transcript via pod2txt for the newest unseen episode
-async function fetchPodcastContent(podcasts, apiKey, state, errors) {
-  const cutoff = new Date(Date.now() - PODCAST_LOOKBACK_HOURS * 60 * 60 * 1000);
-  const allCandidates = [];
-
-  // Step 1: Discover episodes from each podcast's RSS feed
-  for (const podcast of podcasts) {
-    if (!podcast.rssUrl) {
-      errors.push(`Podcast: No rssUrl configured for ${podcast.name}`);
-      continue;
-    }
-
+    console.error(`  Fetching videos for ${channel.name}...`);
     try {
-      console.error(`  Fetching RSS for ${podcast.name}...`);
-      const rssRes = await fetch(podcast.rssUrl, {
-        headers: {
-          "User-Agent": RSS_USER_AGENT,
-          Accept: "application/rss+xml, application/xml, text/xml, */*",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-        signal: AbortSignal.timeout(30000), // 30 second timeout for large feeds
-      });
+      const videos = await fetchYouTubeVideos(channel.url);
+      console.error(
+        `  ${channel.name}: found ${videos.length} recent video(s)`,
+      );
 
-      if (!rssRes.ok) {
-        console.error(
-          `  ${podcast.name}: RSS fetch failed — HTTP ${rssRes.status}`,
-        );
-        errors.push(
-          `Podcast: Failed to fetch RSS for ${podcast.name}: HTTP ${rssRes.status}`,
-        );
+      // Take the newest MAX_VIDEOS_PER_CHANNEL unseen videos within window.
+      // Atom feed entries are newest-first; scraped pages are too.
+      const newVideos = [];
+      for (const video of videos) {
+        if (newVideos.length >= MAX_VIDEOS_PER_CHANNEL) break;
+        if (state.seenVideos[video.url]) continue; // dedup
+        // If we have a date, check it's within the lookback window
+        if (video.publishedAt && new Date(video.publishedAt) < cutoff)
+          continue;
+        newVideos.push(video);
+      }
+
+      if (newVideos.length === 0) {
+        console.error(`    No new videos`);
         continue;
       }
 
-      const rssXml = await rssRes.text();
-      const episodes = parseRssFeed(rssXml);
-      console.error(
-        `  ${podcast.name}: found ${episodes.length} episodes in RSS feed`,
-      );
-
-      // Check the 3 most recent episodes, skip already-seen ones
-      for (const episode of episodes.slice(0, 3)) {
-        if (state.seenVideos[episode.guid]) {
-          console.error(`    Skipping "${episode.title}" (already seen)`);
-          continue;
-        }
-
+      for (const video of newVideos) {
+        // Mark as seen
+        state.seenVideos[video.url] = Date.now();
+        results.push({
+          source: "youtube",
+          name: channel.name,
+          title: video.title,
+          url: video.url,
+          publishedAt: video.publishedAt,
+        });
         console.error(
-          `    Candidate: "${episode.title}" published=${episode.publishedAt || "unknown"}`,
+          `    New video: "${video.title}" published=${video.publishedAt || "unknown"}`,
         );
-        allCandidates.push({ podcast, ...episode });
       }
+
+      // Small delay between channel fetches to be polite
+      await new Promise((r) => setTimeout(r, 500));
     } catch (err) {
-      errors.push(`Podcast: Error processing ${podcast.name}: ${err.message}`);
+      errors.push(`YouTube: Error processing ${channel.name}: ${err.message}`);
     }
   }
 
-  console.error(
-    `  Total candidates: ${allCandidates.length}, cutoff: ${cutoff.toISOString()}`,
-  );
-
-  // Step 2: Filter by lookback window, sort newest first
-  const withinWindow = allCandidates
-    .filter((v) => !v.publishedAt || new Date(v.publishedAt) >= cutoff)
-    .sort((a, b) => {
-      // Newest first; dateless ones go to the end
-      if (a.publishedAt && b.publishedAt)
-        return new Date(b.publishedAt) - new Date(a.publishedAt);
-      if (a.publishedAt) return -1;
-      if (b.publishedAt) return 1;
-      return 0;
-    });
-
-  console.error(`  Within window: ${withinWindow.length} episode(s)`);
-  for (const v of withinWindow) {
-    console.error(`    - "${v.title}" published=${v.publishedAt || "unknown"}`);
-  }
-
-  // Step 3: Try each candidate until we get a transcript from pod2txt
-  for (const selected of withinWindow) {
-    console.error(`    Fetching transcript for "${selected.title}"...`);
-
-    const result = await fetchPod2txtTranscript(
-      selected.podcast.rssUrl,
-      selected.guid,
-      apiKey,
-    );
-
-    // Mark as seen regardless so we don't retry failed episodes daily
-    state.seenVideos[selected.guid] = Date.now();
-
-    if (result.error) {
-      console.error(
-        `    Transcript error: ${result.error} — skipping to next candidate`,
-      );
-      errors.push(
-        `Podcast: Transcript error for "${selected.title}": ${result.error}`,
-      );
-      continue;
-    }
-
-    if (!result.transcript) {
-      console.error(
-        `    Empty transcript for "${selected.title}" — skipping to next candidate`,
-      );
-      continue;
-    }
-
-    console.error(
-      `    Selected: "${selected.title}" (transcript: ${result.transcript.length} chars)`,
-    );
-
-    // Try to resolve the exact YouTube video URL for this episode. If the
-    // lookup fails (no YouTube channel configured, no title match, network
-    // error), fall back to the channel URL so the feed still works.
-    const youtubeUrl = await findYouTubeEpisodeUrl(
-      selected.podcast.url,
-      selected.title,
-    );
-    if (youtubeUrl) {
-      console.error(`    Matched YouTube episode URL: ${youtubeUrl}`);
-    } else {
-      console.error(
-        `    No YouTube episode match found — falling back to channel URL`,
-      );
-    }
-
-    return [
-      {
-        source: "podcast",
-        name: selected.podcast.name,
-        title: selected.title,
-        guid: selected.guid,
-        url: youtubeUrl || selected.podcast.url,
-        publishedAt: selected.publishedAt,
-        transcript: result.transcript,
-      },
-    ];
-  }
-
-  console.error(`    No candidates had transcripts available`);
-  return [];
+  return results;
 }
 
 // -- X/Twitter Fetching (Official API v2) ------------------------------------
@@ -1005,22 +797,17 @@ async function fetchBlogContent(blogs, state, errors) {
 async function main() {
   const args = process.argv.slice(2);
   const tweetsOnly = args.includes("--tweets-only");
-  const podcastsOnly = args.includes("--podcasts-only");
+  const youtubeOnly = args.includes("--youtube-only");
   const blogsOnly = args.includes("--blogs-only");
 
   // If a specific --*-only flag is set, only that feed type runs.
   // If no flag is set, all three run.
-  const runTweets = tweetsOnly || (!podcastsOnly && !blogsOnly);
-  const runPodcasts = podcastsOnly || (!tweetsOnly && !blogsOnly);
-  const runBlogs = blogsOnly || (!tweetsOnly && !podcastsOnly);
+  const runTweets = tweetsOnly || (!youtubeOnly && !blogsOnly);
+  const runYouTube = youtubeOnly || (!tweetsOnly && !blogsOnly);
+  const runBlogs = blogsOnly || (!tweetsOnly && !youtubeOnly);
 
   const xBearerToken = process.env.X_BEARER_TOKEN;
-  const pod2txtKey = process.env.POD2TXT_API_KEY;
 
-  if (runPodcasts && !pod2txtKey) {
-    console.error("POD2TXT_API_KEY not set");
-    process.exit(1);
-  }
   if (runTweets && !xBearerToken) {
     console.error("X_BEARER_TOKEN not set");
     process.exit(1);
@@ -1073,32 +860,31 @@ async function main() {
     );
   }
 
-  // Fetch podcasts
-  if (runPodcasts) {
-    console.error("Fetching podcast content (RSS + pod2txt)...");
-    const podcasts = await fetchPodcastContent(
-      sources.podcasts,
-      pod2txtKey,
+  // Fetch YouTube videos
+  if (runYouTube && sources.youtube && sources.youtube.length > 0) {
+    console.error("Fetching YouTube content...");
+    const youtubeContent = await fetchYouTubeContent(
+      sources.youtube,
       state,
       errors,
     );
-    console.error(`  Found ${podcasts.length} new episodes`);
+    console.error(`  Found ${youtubeContent.length} new video(s)`);
 
-    const podcastFeed = {
+    const youtubeFeed = {
       generatedAt: new Date().toISOString(),
-      lookbackHours: PODCAST_LOOKBACK_HOURS,
-      podcasts,
-      stats: { podcastEpisodes: podcasts.length },
+      lookbackHours: YOUTUBE_LOOKBACK_HOURS,
+      youtube: youtubeContent,
+      stats: { youtubeVideos: youtubeContent.length },
       errors:
-        errors.filter((e) => e.startsWith("Podcast")).length > 0
-          ? errors.filter((e) => e.startsWith("Podcast"))
+        errors.filter((e) => e.startsWith("YouTube")).length > 0
+          ? errors.filter((e) => e.startsWith("YouTube"))
           : undefined,
     };
     await writeFile(
-      join(SCRIPT_DIR, "..", "feed-podcasts.json"),
-      JSON.stringify(podcastFeed, null, 2),
+      join(SCRIPT_DIR, "..", "feed-youtube.json"),
+      JSON.stringify(youtubeFeed, null, 2),
     );
-    console.error(`  feed-podcasts.json: ${podcasts.length} episodes`);
+    console.error(`  feed-youtube.json: ${youtubeContent.length} videos`);
   }
 
   // Fetch blog posts

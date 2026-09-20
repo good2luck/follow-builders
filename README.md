@@ -14,8 +14,8 @@ influencers who regurgitate information.
 A daily or weekly digest delivered to your preferred messaging app (Telegram, Discord,
 WhatsApp, etc.) with:
 
-- Summaries of new podcast episodes from top AI podcasts
 - Key posts and insights from 26 curated AI builders on X/Twitter
+- New videos from 6 curated AI YouTube channels and playlists
 - Full articles from official AI company blogs (Anthropic Engineering, Claude Blog)
 - Links to all original content
 - Available in English, Chinese, or bilingual
@@ -43,7 +43,7 @@ Your delivery preferences are configurable through conversation. Just tell your 
 - "Make the summaries shorter"
 - "Show me my current settings"
 
-The source list (builders and podcasts) is curated centrally and updates
+The source list (builders, channels, and blogs) is curated centrally and updates
 automatically — you always get the latest sources without doing anything.
 
 ## Customizing the Summaries
@@ -57,7 +57,6 @@ insights," "Use a more casual tone." The agent updates the prompts for you.
 
 **Direct editing (power users):**
 Edit the files in the `prompts/` folder:
-- `summarize-podcast.md` — how podcast episodes are summarized
 - `summarize-tweets.md` — how X/Twitter posts are summarized
 - `summarize-blogs.md` — how blog posts are summarized
 - `digest-intro.md` — the overall digest format and tone
@@ -67,7 +66,7 @@ These are plain English instructions, not code. Changes take effect on the next 
 
 ## Default Sources
 
-### Podcasts (6)
+### YouTube Channels (6)
 - [Latent Space](https://www.youtube.com/@LatentSpacePod)
 - [Training Data](https://www.youtube.com/playlist?list=PLOhHNjZItNnMm5tdW61JpnyxeYH5NDDx8)
 - [No Priors](https://www.youtube.com/@NoPriorsPodcast)
@@ -105,13 +104,13 @@ cd ~/.claude/skills/follow-builders/scripts && npm install
 - An AI agent (OpenClaw, Claude Code, or similar)
 - Internet connection (to fetch the central feed)
 
-That's it. No API keys needed. All content (blog articles + YouTube transcripts + X/Twitter posts)
+That's it. No API keys needed. All content (blog articles + YouTube videos + X/Twitter posts)
 is fetched centrally and updated daily.
 
 ## How It Works
 
 1. A central feed is updated daily with the latest content from all sources
-   (blog articles via web scraping, YouTube transcripts via Supadata, X/Twitter via official API)
+   (blog articles via web scraping, YouTube channels via public feeds, X/Twitter via official API)
 2. Your agent fetches the feed — one HTTP request, no API keys
 3. Your agent remixes the raw content into a digestible summary using your preferences
 4. The digest is delivered to your messaging app (or shown in-chat)
@@ -122,7 +121,7 @@ See [examples/sample-digest.md](examples/sample-digest.md) for what the output l
 
 - No API keys are sent anywhere — all content is fetched centrally
 - If you use Telegram/email delivery, those keys are stored locally in `~/.follow-builders/.env`
-- The skill only reads public content (public blog posts, public YouTube videos, public X posts)
+- The skill only reads public content (public blog posts, public YouTube videos, and public X posts)
 - Your configuration, preferences, and reading history stay on your machine
 
 ## License

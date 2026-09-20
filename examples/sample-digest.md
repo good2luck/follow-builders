@@ -6,34 +6,6 @@ This is an example of what your AI Builders Digest looks like.
 
 AI Builders Digest — March 14, 2026
 
-PODCASTS
-
-Latent Space — "Why Agents Keep Failing (And How to Fix Them)"
-Bottom line: Most agent failures aren't intelligence failures — they're tool-use failures.
-The system can reason fine, it just can't reliably call the right API at the right time.
-
-Key insights:
-- Tool selection accuracy drops from 95% to 60% when agents have more than 15 tools
-  available. The fix isn't smarter models — it's better tool curation per task.
-- "Eval-driven development" is replacing vibe-driven prompt iteration at serious
-  AI companies. If you're not measuring, you're guessing.
-- The hosts predict 2026 is the year agent frameworks consolidate from 50+ to 3-4
-  winners. Their bet: OpenAI Agents SDK, Claude Code, and LangGraph.
-https://youtube.com/watch?v=example123
-
-No Priors — "Scaling Laws Are Dead, Long Live Scaling Laws" (with Ilya Sutskever)
-Bottom line: Pre-training scaling laws have hit diminishing returns, but post-training
-and inference-time compute scaling are just getting started.
-
-Key insights:
-- Ilya argues the next 10x improvement comes from models that can "think longer"
-  at inference time, not from bigger pre-training runs.
-- Synthetic data quality matters more than quantity. "One perfect textbook is worth
-  a million Reddit comments."
-- He's surprisingly bullish on open-source: "The gap will narrow to months, not years."
-https://youtube.com/watch?v=example456
-
-
 X / TWITTER
 
 Andrej Karpathy (@karpathy)

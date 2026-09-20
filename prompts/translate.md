@@ -13,6 +13,7 @@ You are translating an AI industry digest from English to Chinese.
 - The tone should be professional but conversational — 像是一位懂行的朋友在跟你聊天
 - For bilingual mode: interleave English and Chinese paragraph by paragraph.
   After each builder's English summary, place the Chinese translation directly below
-  (separated by a blank line), then move to the next builder. Same for podcasts.
+  (separated by a blank line), then move to the next builder. Same for blog posts
+  and YouTube videos.
   Do NOT output all English first then all Chinese.
 - Never use em-dashes

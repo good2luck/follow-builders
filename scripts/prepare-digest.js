@@ -4,7 +4,7 @@
 // Follow Builders — Prepare Digest
 // ============================================================================
 // Gathers everything the LLM needs to produce a digest:
-// - Fetches the central feeds (tweets + podcasts)
+// - Fetches the central feeds (tweets + youtube + blogs)
 // - Fetches the latest prompts from GitHub
 // - Reads the user's config (language, delivery method)
 // - Outputs a single JSON blob to stdout
@@ -27,12 +27,11 @@ const USER_DIR = join(homedir(), '.follow-builders');
 const CONFIG_PATH = join(USER_DIR, 'config.json');
 
 const FEED_X_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-x.json';
-const FEED_PODCASTS_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-podcasts.json';
+const FEED_YOUTUBE_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-youtube.json';
 const FEED_BLOGS_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-blogs.json';
 
 const PROMPTS_BASE = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/prompts';
 const PROMPT_FILES = [
-  'summarize-podcast.md',
   'summarize-tweets.md',
   'summarize-blogs.md',
   'digest-intro.md',
@@ -73,23 +72,23 @@ async function main() {
   }
 
   // 2. Fetch all three feeds
-  const [feedX, feedPodcasts, feedBlogs] = await Promise.all([
+  const [feedX, feedYouTube, feedBlogs] = await Promise.all([
     fetchJSON(FEED_X_URL),
-    fetchJSON(FEED_PODCASTS_URL),
+    fetchJSON(FEED_YOUTUBE_URL),
     fetchJSON(FEED_BLOGS_URL)
   ]);
 
   if (!feedX) errors.push('Could not fetch tweet feed');
-  if (!feedPodcasts) errors.push('Could not fetch podcast feed');
+  if (!feedYouTube) errors.push('Could not fetch youtube feed');
   if (!feedBlogs) errors.push('Could not fetch blog feed');
   if (feedX?.errors?.length) {
     errors.push(
       ...feedX.errors.map((error) => `Tweet feed problem: ${error}`)
     );
   }
-  if (feedPodcasts?.errors?.length) {
+  if (feedYouTube?.errors?.length) {
     errors.push(
-      ...feedPodcasts.errors.map((error) => `Podcast feed problem: ${error}`)
+      ...feedYouTube.errors.map((error) => `YouTube feed problem: ${error}`)
     );
   }
   if (feedBlogs?.errors?.length) {
@@ -148,17 +147,17 @@ async function main() {
     },
 
     // Content to remix
-    podcasts: feedPodcasts?.podcasts || [],
     x: feedX?.x || [],
+    youtube: feedYouTube?.youtube || [],
     blogs: feedBlogs?.blogs || [],
 
     // Stats for the LLM to reference
     stats: {
-      podcastEpisodes: feedPodcasts?.podcasts?.length || 0,
       xBuilders: feedX?.x?.length || 0,
       totalTweets: (feedX?.x || []).reduce((sum, a) => sum + a.tweets.length, 0),
+      youtubeVideos: feedYouTube?.youtube?.length || 0,
       blogPosts: feedBlogs?.blogs?.length || 0,
-      feedGeneratedAt: feedX?.generatedAt || feedPodcasts?.generatedAt || feedBlogs?.generatedAt || null
+      feedGeneratedAt: feedX?.generatedAt || feedYouTube?.generatedAt || feedBlogs?.generatedAt || null
     },
 
     // Prompts — the LLM reads these and follows the instructions

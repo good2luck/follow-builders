@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "generate-feed": "node generate-feed.js",
-    "prepare-digest": "node prepare-digest.js"
+    "prepare-digest": "node prepare-digest.js",
+    "summarize": "node summarize.js",
+    "deliver": "node deliver.js"
   },
   "dependencies": {
     "dotenv": "^16.4.0",

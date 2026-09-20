@@ -11,13 +11,13 @@
     "language": {
       "type": "string",
       "enum": ["en", "zh", "bilingual"],
-      "default": "en",
-      "description": "Digest language: en (English), zh (Chinese), bilingual (both)"
+      "default": "zh",
+      "description": "Digest language: en (English), zh (Chinese, default), bilingual (both)"
     },
     "timezone": {
       "type": "string",
-      "default": "America/Los_Angeles",
-      "description": "IANA timezone string for scheduling (e.g. America/New_York, Asia/Shanghai)"
+      "default": "Asia/Shanghai",
+      "description": "IANA timezone string for scheduling (e.g. Asia/Shanghai, America/New_York)"
     },
     "frequency": {
       "type": "string",
@@ -27,7 +27,7 @@
     },
     "deliveryTime": {
       "type": "string",
-      "default": "08:00",
+      "default": "08:30",
       "description": "Time of day to deliver digest in HH:MM format (24-hour)"
     },
     "weeklyDay": {

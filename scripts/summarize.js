@@ -52,10 +52,18 @@ function buildSystemPrompt(prepared) {
   if (prompts.summarize_tweets) parts.push(prompts.summarize_tweets);
   if (prompts.summarize_blogs) parts.push(prompts.summarize_blogs);
 
-  // Translation — only if the user's language is not English
-  const lang = config?.language || 'en';
+  // Translation — English content is translated into Chinese by default.
+  // Only skipped when the language is explicitly set to 'en'.
+  const lang = config?.language || 'zh';
   if (lang !== 'en' && prompts.translate) {
-    parts.push(prompts.translate.replace('from English to Chinese', `from English to ${lang}`));
+    // translate.md is authored for Chinese (and documents bilingual mode), so
+    // for those two it is used verbatim — rewriting the target to "zh" would
+    // leave the prompt reading "translating ... from English to zh".
+    // Any other language code swaps the target language in the opening line.
+    const prompt = lang === 'zh' || lang === 'bilingual'
+      ? prompts.translate
+      : prompts.translate.replace('from English to Chinese', `from English to ${lang}`);
+    parts.push(prompt);
   }
 
   return parts.join('\n\n---\n\n');

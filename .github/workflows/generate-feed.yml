@@ -2,8 +2,9 @@ name: Generate Feeds
 
 on:
   schedule:
-    # All feeds (tweets, youtube, blogs): once daily at 6:17am UTC
-    - cron: '17 6 * * *'
+    # All feeds (tweets, youtube, blogs) + digest push:
+    # once daily at 8:30am China time (UTC+8), i.e. 00:30 UTC
+    - cron: '30 0 * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -51,6 +52,24 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: update feeds [skip ci]"
           git push
 
+      - name: Configure user settings
+        # Must run BEFORE prepare-digest: it reads language from this file.
+        # Without it the digest falls back to English and is never translated.
+        run: |
+          mkdir -p ~/.follow-builders
+          cat > ~/.follow-builders/config.json <<'EOF'
+          {
+            "platform": "other",
+            "language": "zh",
+            "timezone": "Asia/Shanghai",
+            "frequency": "daily",
+            "deliveryTime": "08:30",
+            "delivery": {
+              "method": "dingtalk"
+            }
+          }
+          EOF
+
       - name: Prepare digest
         run: cd scripts && node prepare-digest.js > /tmp/prepared-digest.json
 
@@ -64,16 +83,8 @@ jobs:
           DINGTALK_ACCESS_TOKEN: ${{ secrets.DINGTALK_ACCESS_TOKEN }}
           DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
           DINGTALK_KEYWORD: ${{ secrets.DINGTALK_KEYWORD }}
-        run: |
-          mkdir -p ~/.follow-builders
-          cat > ~/.follow-builders/config.json <<'EOF'
-          {
-            "delivery": {
-              "method": "dingtalk"
-            }
-          }
-          EOF
-          node scripts/deliver.js --method dingtalk --file /tmp/digest.txt
+        # ~/.follow-builders/config.json was written by the "Configure user settings" step
+        run: node scripts/deliver.js --method dingtalk --file /tmp/digest.txt
 
       - name: Cleanup
         if: always()

@@ -59,7 +59,7 @@ async function main() {
 
   // 1. Read user config
   let config = {
-    language: 'en',
+    language: 'zh',
     frequency: 'daily',
     delivery: { method: 'stdout' }
   };
@@ -141,7 +141,7 @@ async function main() {
 
     // User preferences
     config: {
-      language: config.language || 'en',
+      language: config.language || 'zh',
       frequency: config.frequency || 'daily',
       delivery: config.delivery || { method: 'stdout' }
     },

@@ -838,9 +838,13 @@ async function main() {
       }
     }
 
+    // X API can return HTTP 401/402/403 when the token is invalid, the free
+    // tier is exhausted, or billing has lapsed. This shouldn't kill the whole
+    // run — YouTube and blog feeds can still produce a useful digest.
+    // Write an empty X feed and continue.
     if (xContent.length === 0 && xErrors.length > 0) {
-      throw new Error(
-        `X feed failed: 0 builders returned and ${xErrors.length} X API error(s) occurred`,
+      console.error(
+        `  Warning: X feed is empty (${xErrors.length} API error(s)). Continuing with YouTube + blogs.`,
       );
     }
 

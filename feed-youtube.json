@@ -1,23 +1,37 @@
 {
-  "generatedAt": "2026-09-20T05:30:43.167Z",
+  "generatedAt": "2026-09-20T11:20:42.840Z",
   "lookbackHours": 72,
   "youtube": [
     {
       "source": "youtube",
-      "name": "No Priors",
-      "title": "Why Diffusion Will Win AI Inference with Inception Co-Founder and CEO Stefano Ermon",
-      "url": "https://www.youtube.com/watch?v=N1rjtDs8blY",
-      "publishedAt": "2026-09-18T10:00:10.000Z"
+      "name": "Latent Space",
+      "title": "A Worm With 302 Neurons Inspired Their Architecture — Ramin Hasani, Liquid AI",
+      "url": "https://www.youtube.com/watch?v=V_9TCu_21SE",
+      "publishedAt": "2026-09-18T20:17:04.000Z"
     },
     {
       "source": "youtube",
-      "name": "No Priors",
-      "title": "Google’s $10M Data Grab",
-      "url": "https://www.youtube.com/watch?v=hg0X7hdpuVs",
-      "publishedAt": "2026-09-17T16:37:17.000Z"
+      "name": "The MAD Podcast with Matt Turck",
+      "title": "Why Some People Love AI—and Others Hate It #ai #podcast",
+      "url": "https://www.youtube.com/watch?v=saJqCsom1gQ",
+      "publishedAt": "2026-09-19T16:00:36.000Z"
+    },
+    {
+      "source": "youtube",
+      "name": "The MAD Podcast with Matt Turck",
+      "title": "AI Is Already Reducing Animal Testing #ai #podcast",
+      "url": "https://www.youtube.com/watch?v=gWdsuChDPZA",
+      "publishedAt": "2026-09-18T16:00:13.000Z"
+    },
+    {
+      "source": "youtube",
+      "name": "The MAD Podcast with Matt Turck",
+      "title": "Biology Is Becoming Programmable #ai #podcast",
+      "url": "https://www.youtube.com/watch?v=aQJZyiqaHlY",
+      "publishedAt": "2026-09-17T16:00:37.000Z"
     }
   ],
   "stats": {
-    "youtubeVideos": 2
+    "youtubeVideos": 4
   }
 }

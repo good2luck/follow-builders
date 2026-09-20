@@ -12,7 +12,8 @@
 //   node deliver.js --file /path/to/digest.txt
 //
 // The script reads delivery config from ~/.follow-builders/config.json
-// and API keys from ~/.follow-builders/.env
+// and API keys from ~/.follow-builders/.env or repo-root .env
+// Override delivery method with --method flag or DELIVERY_METHOD env var.
 //
 // Delivery methods:
 //   - "telegram": sends via Telegram Bot API (needs TELEGRAM_BOT_TOKEN + chat ID)
@@ -32,6 +33,8 @@ import { config as loadEnv } from 'dotenv';
 const USER_DIR = join(homedir(), '.follow-builders');
 const CONFIG_PATH = join(USER_DIR, 'config.json');
 const ENV_PATH = join(USER_DIR, '.env');
+const SCRIPT_DIR = decodeURIComponent(new URL('.', import.meta.url).pathname);
+const REPO_ENV_PATH = join(SCRIPT_DIR, '..', '.env');
 
 // -- Read input --------------------------------------------------------------
 
@@ -156,8 +159,17 @@ async function sendEmail(text, apiKey, toEmail) {
 // The webhook URL looks like:
 //   https://oapi.dingtalk.com/robot/send?access_token=xxx
 // We store only the access_token, then build the URL at send time.
+// Supports an optional keyword filter via DINGTALK_KEYWORD env var —
+// DingTalk custom robots can require messages to contain a specific keyword.
 async function sendDingtalk(text, accessToken) {
   const url = `https://oapi.dingtalk.com/robot/send?access_token=${accessToken}`;
+
+  // If the robot has a keyword filter, make sure the message contains it.
+  // Common practice is to append the keyword at the end as a signature line.
+  const keyword = process.env.DINGTALK_KEYWORD;
+  const finalText = keyword && !text.includes(keyword)
+    ? `${text}\n\n${keyword}`
+    : text;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -166,7 +178,7 @@ async function sendDingtalk(text, accessToken) {
       msgtype: 'markdown',
       markdown: {
         title: 'AI Builders Digest',
-        text: text
+        text: finalText
       }
     })
   });
@@ -181,6 +193,9 @@ async function sendDingtalk(text, accessToken) {
 
 async function main() {
   // Load env and config
+  // Repo-root .env takes precedence as a fallback; dotenv won't override
+  // existing process env vars (set by GitHub Actions secrets, shell, etc.)
+  loadEnv({ path: REPO_ENV_PATH });
   loadEnv({ path: ENV_PATH });
 
   let config = {};
@@ -188,7 +203,18 @@ async function main() {
     config = JSON.parse(await readFile(CONFIG_PATH, 'utf-8'));
   }
 
+  // Allow overriding delivery method: --method flag > DELIVERY_METHOD env > config
+  const args = process.argv.slice(2);
+  const methodFlagIdx = args.indexOf('--method');
+  const methodOverride =
+    (methodFlagIdx !== -1 && args[methodFlagIdx + 1]) ||
+    process.env.DELIVERY_METHOD ||
+    null;
+
   const delivery = config.delivery || { method: 'stdout' };
+  if (methodOverride) {
+    delivery.method = methodOverride;
+  }
   const digestText = await getDigestText();
 
   if (!digestText || digestText.trim().length === 0) {

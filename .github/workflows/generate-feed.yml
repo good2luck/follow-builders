@@ -63,6 +63,7 @@ jobs:
         env:
           DINGTALK_ACCESS_TOKEN: ${{ secrets.DINGTALK_ACCESS_TOKEN }}
           DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
+          DINGTALK_KEYWORD: ${{ secrets.DINGTALK_KEYWORD }}
         run: |
           mkdir -p ~/.follow-builders
           cat > ~/.follow-builders/config.json <<'EOF'
@@ -72,7 +73,7 @@ jobs:
             }
           }
           EOF
-          node scripts/deliver.js --file /tmp/digest.txt
+          node scripts/deliver.js --method dingtalk --file /tmp/digest.txt
 
       - name: Cleanup
         if: always()

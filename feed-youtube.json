@@ -1,8 +1,30 @@
 {
-  "generatedAt": "2026-09-24T05:05:15.459Z",
+  "generatedAt": "2026-09-25T05:07:48.403Z",
   "lookbackHours": 72,
-  "youtube": [],
+  "youtube": [
+    {
+      "source": "youtube",
+      "name": "Latent Space",
+      "title": "Runway’s Bet Beyond Video: World Models, Robotics, and the Neural OS — Anastasis Germanidis",
+      "url": "https://www.youtube.com/watch?v=fGRd5gYhztg",
+      "publishedAt": "2026-09-25T01:40:15.000Z"
+    },
+    {
+      "source": "youtube",
+      "name": "Latent Space",
+      "title": "🔬Bio-security is an AI Arms Race - Eric Nguyen (CEO, Radical Numerics)",
+      "url": "https://www.youtube.com/watch?v=B7DdNj_VjcU",
+      "publishedAt": "2026-09-23T13:35:08.000Z"
+    },
+    {
+      "source": "youtube",
+      "name": "Latent Space",
+      "title": "🔬 Google's AI Scientist Started as an Attempt to Automate Kaggle — John Platt, Google Fellow",
+      "url": "https://www.youtube.com/watch?v=2xBSGluFkG0",
+      "publishedAt": "2026-09-22T21:07:45.000Z"
+    }
+  ],
   "stats": {
-    "youtubeVideos": 0
+    "youtubeVideos": 3
   }
 }
